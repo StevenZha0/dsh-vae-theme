@@ -43,10 +43,10 @@
     "node": ">=20"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": ">=4"
+    "dsh-theme-customizer": ">=1.0.0"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "dsh-theme-customizer": {
       "optional": true
     }
   }
