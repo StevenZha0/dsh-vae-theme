@@ -110,9 +110,13 @@
 
 ### 字体
 
-- **书法字**（VAE 标志、金色艺术字、歌词）：华文行楷 `STXingkai`
-- **落款**（歌词出处）：华文楷体 `STKaiti`
-- **界面**：系统默认（主题不改界面字体，保持 DSH 原生可读性）
+| 用途 | 字体 | 说明 |
+|---|---|---|
+| **书法字**（VAE 标志、金色艺术字） | 华文行楷 `STXingkai` | 需要书写感的地方 |
+| **落款**（歌词出处） | 华文楷体 `STKaiti` | |
+| **歌词主栏** | 华文行楷 `STXingkai` | |
+| **新会话欢迎页标题** | **思源宋体 `Noto Serif SC`** | 开源字体（SIL OFL）。宋体撇捺有锋芒、但不带楷体的书写体势，正好落在「太有气质」与「太干燥」之间；回退链 `Source Han Serif SC → STZhongsong → 华文中宋 → SimSun` |
+| **界面** | 系统默认 | 主题不改界面字体，保持 DSH 原生可读性 |
 
 ### 金丝九宫格边框
 
@@ -377,7 +381,7 @@ localStorage.setItem('vae-theme-fx', 'off')
 | 歌词垂直落点 | `place()` 里的 `vh * 0.34` 与 `minTop = 96` |
 | 歌词横向落点 | `place()` 里的 `gutter / 2 - 30` |
 | VAE 标志尺寸 | `.vae-brand` 的 `max-width: 132px` / `height: 34px` |
-| **新会话欢迎页标题文案** | `heroSwap()` 里的 `HERO_TEXT`（默认「快写一段提示词雅俗共赏」） |
+| **新会话欢迎页标题文案** | `heroSwap()` 里的 `HERO_TEXT`（默认「快写一段提示词雅俗共赏~」） |
 | 隐藏欢迎页鲸鱼 / 预览版徽标 | CSS 里的 `[class*="_fishHitbox"]` / `[class*="_previewBadge"]` |
 
 ---
