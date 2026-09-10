@@ -29,6 +29,15 @@
     "guofeng",
     "chinese-ink"
   ],
+  "author": "StevenZha0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StevenZha0/dsh-vae-theme.git"
+  },
+  "homepage": "https://github.com/StevenZha0/dsh-vae-theme#readme",
+  "bugs": {
+    "url": "https://github.com/StevenZha0/dsh-vae-theme/issues"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=20"

@@ -35,6 +35,10 @@
 
 ![九宫格验证](docs/金丝边框-九宫格验证.jpg)
 
+实际落在输入区上的效果（半透明玻璃 + 贴边金丝 + 紧贴边的细辫纹）：
+
+![输入区金丝边框](docs/输入区-金丝边框.jpg)
+
 ### VAE 书法标志与金色导航字
 
 ![艺术字](docs/VAE艺术字与金色导航字.jpg)
@@ -171,16 +175,16 @@ npm install <本仓库发布的包名>
 ### 方式二：从源码本地挂载（开发者）
 
 ```bash
-git clone <本仓库>
+git clone https://github.com/StevenZha0/dsh-vae-theme.git
 cd ~/.dsh/profiles/web
-npm install link:$(pwd)/../path/to/repo      # 或手工写 link: 依赖
+npm install link:/绝对路径/dsh-vae-theme
 ```
 
 `package.json`：
 
 ```json
 {
-  "dependencies": { "dsh-vae-theme": "link:/绝对路径/repo" },
+  "dependencies": { "dsh-vae-theme": "link:/绝对路径/dsh-vae-theme" },
   "dsh": { "profile": { "bundles": ["...", "dsh-vae-theme"] } }
 }
 ```
