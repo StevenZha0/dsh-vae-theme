@@ -1,0 +1,19 @@
+# 依赖
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+
+# 生成脚本的原始素材（体积大 / 含第三方版权，不入库）
+raw/
+build/
+发布/
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+npm-debug.log*

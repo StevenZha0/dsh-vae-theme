@@ -1,0 +1,7 @@
+# dsh-vae-theme bundle layer —— 安装后由 package.json 的 dsh.bundle.patch 自动应用。
+# 插入一行 Cordis 插件：它注册 /vae-theme-seed.js、/vae-theme-apply、/vae-theme-status
+# 三个 HTTP 路由，并把主题种子脚本注入 index.html 的 <head>。
+
+- insert:
+    - id: vae-theme
+      name: dsh-vae-theme

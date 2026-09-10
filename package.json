@@ -1,0 +1,44 @@
+{
+  "name": "dsh-vae-theme",
+  "version": "1.0.0",
+  "description": "《庐州月 · 许嵩》DSH Web 界面主题：国风水墨长卷背景、金丝九宫格边框、VAE 书法标志、全屏雨幕与许嵩国风歌词竖排轮播。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json",
+    "./lyrics.mjs": "./lyrics.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "lib",
+    "lyrics.mjs",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "theme",
+    "guofeng",
+    "chinese-ink"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  }
+}
