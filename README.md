@@ -160,6 +160,12 @@ CSS 用 `html body` 前缀压过插件自带的 `!important`。整圈只有**一
 
 **⑤ 图片内容居中。** 背景图用 `background-position: center` 居中的是**整张画布**——画布内容不居中，字看起来就偏。生成器里加了 `centerInk()`：按墨迹包围盒自动裁切再对称留白，并附居中复核。
 
+**⑥ 透明输入框上方的对话裁切。** 输入框是半透明玻璃，滚上来的对话文字会透过它与输入内容重叠。不做模糊（会糊掉背景长卷），改为给**对话内容本身**（`[data-chat-flow]`）加 CSS `mask-image`：正文在分隔线处淡出，背景自然透出。
+
+这里有个坑：`mask-image` 会作用于元素**及其全部后代**（`position: fixed` 的后代也逃不掉）。最初把 mask 加在了它的**滚动祖先**上，而那个容器同时装着输入框——结果**输入框被一起隐藏了**。正确做法是只 mask 内容节点。又因为内容会滚动而裁切线要固定在屏幕上，mask 位置需随滚动重算（`scroll` 用捕获阶段监听，rAF 节流）。
+
+**⑦ 状态变化收不到通知的兜底。** 右侧栏开合只改宽度或 `class`、不增删节点，`MutationObserver` 的 `childList` 收不到，导致"藏得掉、回不来"。除修检测逻辑外，再加一个 300ms 周期校准——不依赖任何事件，状态最终必然收敛。
+
 ---
 
 ## 安装
@@ -383,6 +389,11 @@ localStorage.setItem('vae-theme-fx', 'off')
 | VAE 标志尺寸 | `.vae-brand` 的 `max-width: 132px` / `height: 34px` |
 | **新会话欢迎页标题文案** | `heroSwap()` 里的 `HERO_TEXT`（默认「快写一段提示词雅俗共赏~」） |
 | 隐藏欢迎页鲸鱼 / 预览版徽标 | CSS 里的 `[class*="_fishHitbox"]` / `[class*="_previewBadge"]` |
+| 输入区上方分隔线的位置 | `chatDivider()` 里的 `sr.top - 14`（`14` 即线上方留白） |
+| 分隔线的粗细与深浅 | CSS 里 `#vae-chat-divider` 的 `height` 与渐变中的 `.15` |
+| 对话裁切的淡出长度 | `applyFlowMask()` 里的 `maskY - 14`；mask 目标为 `[data-chat-flow]` |
+| 金色字避让右侧栏 | `rightbarOpen()` 的两条判据（右栏列宽 > 60 / 中列右缘空隙 > 60） |
+| 状态校准周期 | `boot()` 里 `setInterval(placeGold, 300)` |
 
 ---
 
