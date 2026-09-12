@@ -1,7 +1,6 @@
-﻿// 生成《庐州月 · 许嵩》完整主题配置（.tczp + localStorage 配置 + 注入脚本）
+// 生成《庐州月 · 许嵩》完整主题配置（.tczp + localStorage 配置 + 注入脚本）
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const ASSETS = path.join(ROOT, 'build/assets')
@@ -12,6 +11,12 @@ const THEME_NAME = '庐州月 · 许嵩'
 const uri = (f, label) => {
   const b = fs.readFileSync(path.join(ASSETS, f))
   return { dataURI: `data:image/webp;base64,${b.toString('base64')}`, fileName: label, fit: 'cover' }
+}
+
+/** build/ 下的资源转 dataURI（动态素材用，不带 tile 的 fit 字段） */
+const dataURIOf = (f) => {
+  const mime = f.endsWith('.png') ? 'image/png' : 'image/webp'
+  return `data:${mime};base64,${fs.readFileSync(path.join(ROOT, 'build', f)).toString('base64')}`
 }
 
 const IMG = {
@@ -46,11 +51,15 @@ const theme = {
   appBottomVersion: 1,
 
   areas: {
-    // 主界面：水墨长卷（显示区域不包含侧边栏 → 长卷紧贴侧边栏右侧铺开）
+    // 主界面：水墨长卷。
+    // includeSidebar 必须为 true —— 定制器在 false 时会走
+    // 「background-size: (vw − 侧栏宽)px 100%」这个**不等比**分支，
+    // 侧边栏一收一放，图片被横向拉伸且两态比例不同，回不到原状。
+    // 置 true 则用 cover，等比铺满，两态一致。
     app: {
       mode: 'image', color: '#ffffff', opacity: 0.10, image: IMG.app,
       bottomEnabled: true, bottomColor: C.ink, bottomOpacity: 0,
-      includeSidebar: false,
+      includeSidebar: true,
       collapsedSidebar: {
         mode: 'image', color: '#ffffff', opacity: 0.10, image: IMG.app,
         bottomEnabled: true, bottomColor: C.ink, bottomOpacity: 0,
@@ -148,6 +157,26 @@ const theme = {
     addBtnOpacity: 0, cmdMenuOpacity: 0, sliderOpacity: 0, sliderTrackOpacity: 0, scrollOpacity: 0,
     bubbleOpacity: 0, inlineOpacity: 0, codeOpacity: 0, scrollbarOpacity: 0, chatScrollOpacity: 0,
     todoCollapsedOpacity: 0, todoExpandedOpacity: 0, toBottomOpacity: 0,
+  },
+
+  /* ── 动态背景资源（自研扩展键，定制器不认它，但会原样写进 localStorage）──
+     三层同坐标系：
+       water  = 水面 + 涟漪 + 月影  → Canvas 逐行位移（涟漪与倒影一起被扰动）
+       reeds  = 芦苇                → 根部不动、梢部摆动的斜坡平移
+       static = 礁石 / 岸影 / 题字   → 原样重绘，不参与位移
+     合计约 190KB，落在 localStorage 预算内。 */
+  vaeFx: {
+    water: {
+      dataURI: dataURIOf('water-band.webp'),
+      reedsURI: dataURIOf('reeds-band.webp'),
+      staticURI: dataURIOf('static-band.webp'),
+      /* 运动参数图：每株芦苇自己的相位/株高/摆幅，编码在 RGB 里。
+         没有它，着色器只能按"离图底的绝对高度"弯曲，矮株几乎不动、
+         高株摆得厉害，同一丛里有动有不动 —— 看着就是"扭曲"。 */
+      motionURI: dataURIOf('reeds-motion.png'),
+      geometry: JSON.parse(fs.readFileSync(path.join(ROOT, 'build/water-geom.json'), 'utf8')),
+      fileName: '庐州月-动态水带.webp',
+    },
   },
 }
 

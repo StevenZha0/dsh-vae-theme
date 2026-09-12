@@ -11,7 +11,6 @@
 import sharp from 'sharp'
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = path.join(ROOT, 'build/assets')
@@ -26,9 +25,9 @@ const UNIT = 44
 const EDGE_LEN = UNIT * 4
 
 /** 卷草纹：从 y 出发回到 y，保证可无缝平铺 */
-function wave(x0, y, len, amp, opacity, stroke = 1.15) {
+function wave(x0, y, len, amp, opacity, stroke = 1.15, color = G.g2) {
   const n = Math.round(len / UNIT)
-  const parts = [`<g fill="none" stroke="${G.g2}" stroke-width="${stroke}" opacity="${opacity}" stroke-linecap="round">`]
+  const parts = [`<g fill="none" stroke="${color}" stroke-width="${stroke}" opacity="${opacity}" stroke-linecap="round">`]
   for (let i = 0; i < n; i++) {
     const x = x0 + i * UNIT
     const dir = i % 2 === 0 ? 1 : -1
@@ -50,7 +49,7 @@ function edgeV(flip, C, band, len, amp, braid, braidOn) {
     `<g transform="${flip ? `translate(${C},0) scale(-1,1)` : ''}">`,
     goldLine(0.5, 0, Math.max(1, C * 0.038), len, 0.85),
   ]
-  if (braidOn) parts.push(`<g transform="translate(${band},0) rotate(90)">${wave(0, 0, len, amp, 0.5, braid)}</g>`)
+  if (braidOn) parts.push(`<g transform="translate(${band},0) rotate(90)">${wave(0, 0, len, amp, 0.82, braid, G.g1)}</g>`)
   parts.push('</g>')
   return sharp(svg(C, len, parts.join(''))).png().toBuffer()
 }
@@ -67,7 +66,7 @@ async function frameSet(C, len, radius, braidOn = true) {
       `<g transform="${flip ? `translate(0,${C}) scale(1,-1)` : ''}">`,
       goldLine(0, 0.5, len, hair, 0.85),
     ]
-    if (braidOn) parts.push(wave(0, bandY, len, amp, 0.5, braid))
+    if (braidOn) parts.push(wave(0, bandY, len, amp, 0.82, braid, G.g1))
     parts.push('</g>')
     return sharp(svg(len, C, parts.join(''))).png().toBuffer()
   }

@@ -3,7 +3,6 @@
 import sharp from 'sharp'
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const A = path.join(ROOT, 'build/assets')
@@ -99,8 +98,6 @@ const ui = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" hei
   </g>
   <line x1="${SB}" y1="84" x2="${W}" y2="84" stroke="${bMain}" stroke-width="1"/>
   <g font-family="Microsoft YaHei">
-    <text x="${W - 40}" y="124" font-size="13.5" fill="${C.main}" text-anchor="end">把水墨长卷也放进侧边栏看看</text>
-    <rect x="${W - 330}" y="102" width="298" height="34" rx="16" fill="${cfg.convBgs.bubble}" stroke="${bMain}" stroke-width="1"/>
     <text x="${SB + 34}" y="192" font-size="11.5" fill="${C.faded}">思考中 · 3.2s</text>
     <text x="${SB + 34}" y="218" font-size="13.5" fill="${C.process}">我先确认主题素材的体积是否落在 localStorage 限额内，再写入配置。</text>
     <text x="${SB + 34}" y="268" font-size="13.5" fill="${C.main}">《庐州月》水墨长卷已作为主界面背景：</text>

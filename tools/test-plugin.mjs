@@ -1,6 +1,8 @@
 // 离线验证 dsh-vae-theme 静态插件：用假 ctx / 假 webServer 实际调用 apply，
 // 并真实执行三个路由处理器，确认不会在 profile 启动时抛错。
-const mod = await import('file:///C:/Users/17919/.dsh/profiles/web/local-plugins/dsh-vae-theme/lib/index.js')
+const PLUGIN = process.env.VAE_PLUGIN
+  || new URL('../lib/index.js', import.meta.url).href
+const mod = await import(PLUGIN)
 
 console.log('导出:', Object.keys(mod))
 
@@ -53,9 +55,39 @@ console.log('\n--- /vae-theme-seed.js ---')
 const res1 = fakeRes()
 await routes.get('/vae-theme-seed.js')({}, res1)
 console.log('status', res1.status, '| bytes', res1.body.length, '| content-type', res1.headers['content-type'])
-for (const key of ['vae-rain', 'vae-lyric', '_logoRow', 'theme-customizer-config-v1', 'vae-luzhou-static-1', 'data:image/webp;base64']) {
-  console.log(`   含 ${key.padEnd(30)}:`, res1.body.includes(key))
+
+/* 逐项核对静态插件实际吐出的运行时装，防止"改了工作区但插件里是旧版" */
+const FEATURES = {
+  '主题配置写入': 'theme-customizer-config-v1',
+  '图片资源内嵌': 'data:image/webp;base64',
+  'VAE 标记': 'function brandSwap',
+  '折叠态嵩字': '_railMark',
+  '欢迎页文案': '快写一段提示词雅俗共赏',
+  '欢迎页改写': 'function heroSwap',
+  '金色艺术字': 'function goldNav',
+  '全屏雨幕': 'function startRain',
+  '九宫格边框': 'background-size:36px 36px',
+  '边框平铺': 'repeat-x',
+  '对话裁切': 'function chatDivider',
+  '右侧栏避让': 'function rightbarOpen',
+  '竖排歌词': 'vae-vcol',
+  '歌词纯随机': 'function pickIndex',
+  '歌词库': 'var LYRICS',
+  '歌词字号自适应': '长句自动缩字号',
+  '思源宋体': 'Noto Serif SC',
+  '动态水带': 'function startWater',
+  '水带逐行位移': 'ampNear',
+  '芦苇摆动层': 'imgReeds',
+  '静置前景层': 'imgStatic',
 }
+let pass = 0, fail = 0
+for (const [label, needle] of Object.entries(FEATURES)) {
+  const hit = res1.body.includes(needle)
+  if (hit) pass++; else fail++
+  console.log(`   ${hit ? '✓' : '✗'} ${label}`)
+}
+const lyricCount = (res1.body.match(/","[^"]+"\],\["/g) || []).length
+console.log(`   功能项 ${pass} 通过 / ${fail} 缺失`)
 
 console.log('\n--- /vae-theme-apply ---')
 const res2 = fakeRes()

@@ -2,7 +2,6 @@
 import sharp from 'sharp'
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = path.join(ROOT, 'build')
@@ -101,13 +100,13 @@ console.log('生成 VAE 标记…')
 const main = await centerInk(await mark(150, 40, 30, 16, 30), 3.88)
 await save('vae-logo.png', main)
 
-// 收起态：单个「许」字小印（无印章框，纯书法字）
+// 收起态：单个「嵩」字小标（无印章框，纯书法字）
 const miniSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
   <defs><linearGradient id="ink" x1="0" y1="0" x2="0.3" y2="1">
     <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="${moon}"/><stop offset="1" stop-color="#A8BEC9"/>
   </linearGradient></defs>
   <g font-family="STXingkai" fill="url(#ink)">
-    <text x="36" y="48" font-size="44" text-anchor="middle">许</text>
+    <text x="36" y="48" font-size="44" text-anchor="middle">嵩</text>
   </g>
 </svg>`
 const mini = await centerInk(await sharp(Buffer.from(miniSvg)).png().toBuffer(), 1)
