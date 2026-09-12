@@ -313,30 +313,55 @@ let reflect = ''
   const TOP = HZ + 96
   const BOT = H + 40
   const MOONW = 150                        /* 约等于月亮半径：路径宽度以它为准 */
-  /* 不画底层辉光。
-     曾用「梯形 + 横向遮罩」→ 出现两道笔直竖边；改用径向渐变椭圆 →
-     变成一个糊到水线以上、盖住山体的大光斑，像探照灯。
-     资料说得很清楚：闪光路径本来就是**由无数闪光点组成**的，
-     它的形体应该完全由闪光点自己堆出来，不该另铺一层底光。 */
-  /* 镜面反射区：正下方偏上那块更亮的斑（平静水面本该映出月亮的位置） */
-  reflect += `<ellipse cx="${MX}" cy="${TOP + 44}" rx="${MOONW * 0.70}" ry="32"`
-    + ` fill="url(#reflCore)" opacity="0.50"/>`
-  /* 闪光点：一根根短横线，长短与亮度随机、彼此留空隙 —— 这才是"闪"的来源。
-     近处（画面下方）波面更陡，光斑更长更散，与资料里
-     "wider closer to the shore than at the horizon" 一致。 */
-  for (let i = 0; i < 420; i++) {
-    const t = Math.pow(rnd(), 1.15)                  /* 0 = 水线，1 = 画面底 */
-    const y = TOP + t * (BOT - TOP)
-    const half = MOONW * (0.45 + 0.80 * t)           /* 散布半径随深度缓慢增长 */
-    const cx = MX + (rnd() - 0.5) * 2 * half
-    const edge = Math.abs(cx - MX) / Math.max(half, 1)
-    /* 越靠边越短：中间密、两侧疏，自然形成横向条纹 */
-    const maxLen = (34 + 300 * t) * (1 - 0.62 * edge * edge)
-    const len = Math.max(6, maxLen * (0.18 + 0.82 * Math.pow(rnd(), 1.7)))
-    const op = (0.075 + 0.26 * rnd()) * (1 - t * 0.42) * (1 - 0.5 * edge * edge)
-    const hgt = 0.7 + 1.5 * t
-    reflect += `<rect x="${(cx - len / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${len.toFixed(1)}"`
-      + ` height="${hgt.toFixed(1)}" rx="${(hgt / 2).toFixed(2)}" fill="${C.moon}" opacity="${op.toFixed(3)}"/>`
+  /* ── 月亮已经高悬（MOON.y = 0.185，仰角约 18.5°），倒影该是什么样 ──
+     参考 Atmospheric Optics《Glitter Paths》(atoptics.co.uk/blog/glitter-paths/)：
+       · 那根长竖带的「闪光路径」出现在月亮/太阳**贴近地平线**时；
+       · 波浪很平时「只看到月亮在静水里的镜面倒影」；
+       · 路径宽度由天体的**角宽度**决定、与波高无关，坡度越大才越"宽"。
+
+     旧做法错在把"低月长竖带"画进了"高月"的场景：几百条闪光条从水线一路铺到画面底（744px），
+     亮度又随深度迅速衰减。实测纵向剖面（x 2822±140，每 80px 一段）：
+         y1660 均值 56.8、亮点(>60)占 30.3%   ← 只有水线正下这一条是亮的
+         y1740 均值 35.8、亮点 0%
+         y2060 均值 20.0、亮点 0.6%
+         y2380 均值  5.7、亮点 0%
+     即：能量全挤在水线下的一小条，其余 700px 是又长又暗的拖尾 —— 读作一根"月光柱"，
+     而本该**又大又亮**的那块镜面倒影反而很小。
+
+     现在按高月该有的样子重做：
+       ① 镜面斑（主）：静水里月亮的那块倒影，做成明显更大的亮椭圆，
+          再叠一个柔和的扩散椭圆表现"波纹把它晕开"；
+       ② 闪光条（辅）：只在上半段做纹理，密度与亮度向下收束，不再拖到画面底，
+          免得重新长成那根柱子。 */
+  /* ① 镜面斑：平顶软边的亮椭圆 + 两圈更大的柔光（波纹把它晕开的那几层）。
+        斑块本身要**干净对称**：椭圆的形状已经把"这是一块倒影"说清楚了。 */
+  const PCX = MX, PCY = TOP + 86
+  reflect += `<ellipse cx="${PCX}" cy="${PCY}" rx="${MOONW * 1.30}" ry="${MOONW * 0.60}"`
+    + ` fill="url(#reflPatch)" opacity="0.78"/>`
+  reflect += `<ellipse cx="${PCX}" cy="${PCY + 26}" rx="${MOONW * 1.72}" ry="${MOONW * 0.86}"`
+    + ` fill="url(#reflPatch)" opacity="0.34" filter="url(#softwater)"/>`
+  reflect += `<ellipse cx="${PCX}" cy="${PCY + 62}" rx="${MOONW * 2.05}" ry="${MOONW * 1.05}"`
+    + ` fill="url(#reflPatch)" opacity="0.16" filter="url(#softwater)"/>`
+  /* ② 闪光条：**条数少、亮度低、左右对称**，只作为"水面被打碎"的一点肌理。
+        上一版在椭圆里撒了 260 条随机短横线，结果斑块出现"斑驳的毛边 + 偏心亮核"，
+        看上去像斜的、像脏的（放大实测确认）。这里改成：
+          · 左右镜像成对，保证斑块重心不偏；
+          · 条数降到 70、亮度再压，避免再次堆出毛边；
+          · 只落在椭圆内侧，不越界拖尾。 */
+  const GLINT_N = 70
+  for (let i = 0; i < GLINT_N; i++) {
+    const dx = (rnd() - 0.5) * 2 * MOONW * 1.02
+    const dy = (rnd() - 0.5) * 2 * MOONW * 0.40
+    const e = Math.sqrt((dx / (MOONW * 1.05)) ** 2 + (dy / (MOONW * 0.44)) ** 2)
+    if (e > 1) continue
+    const len = Math.max(5, (18 + 90 * (1 - e)) * (0.30 + 0.70 * rnd()))
+    const op = (0.05 + 0.13 * rnd()) * (1 - 0.55 * e)
+    const hgt = 0.6 + 0.9 * rnd()
+    for (const sgn of [1, -1]) {
+      const tx = PCX + sgn * Math.abs(dx)
+      reflect += `<rect x="${(tx - len / 2).toFixed(1)}" y="${(PCY + dy).toFixed(1)}" width="${len.toFixed(1)}"`
+        + ` height="${hgt.toFixed(1)}" rx="${(hgt / 2).toFixed(2)}" fill="${C.moon}" opacity="${op.toFixed(3)}"/>`
+    }
   }
 }
 
@@ -363,10 +388,24 @@ const motionStroke = (x0, y0, cx, cy, x1, y1, phase, hNorm, amp, headX, headY) =
 }
 
 let rightReeds = ''
-for (let i = 0; i < 52; i++) {
+/* 右侧芦苇丛（图像 x 2880~3840，即画面最右 1/4）。这是用户一直要求加强的那一丛。
+   历史：原来 52 株、株高 110+320=430 封顶，所以又矮又稀，和左丛（96 株、最高 920）
+   完全不对称。用户两次说"右边太稀疏，弄成和左边差不多"。
+   我前面把"右边"误判成了中段，绕了两轮；这里才是真正的对象。
+   现在两处都补上：
+     · 株数 52 → 168（左丛 96 株铺 1160px，右丛 168 株铺 960px，单位宽度密度相当）
+     · 株高上限 430 → 610（保持比左丛矮一档，仍有层次，也不去抢月影）
+   两条约束没变：
+     ① **不能增减 rnd() 的调用次数** —— 同一颗种子，序列一挪，后面的中段丛、礁石、船、
+        鸟、闪光条乃至倒影全都会跟着改变（整幅画面都会动）。所以高矮抖动量复用本轮
+        已取到的 bend，不多取随机数。
+     ② 取值顺序：x → bend → top → sw → op → 穗头旋转 → 相位 → 摆幅。
+        加株数只是让序列"更长"，已生成的每一株用的随机值一个没动。 */
+for (let i = 0; i < 168; i++) {
   const x = W * 0.75 + rnd() * (W * 0.25)
-  const top = H - 110 - rnd() * 320
   const bend = (rnd() - 0.5) * 90
+  const tall = (bend + 45) / 90                        /* 0..1，复用 bend 当抖动量 */
+  const top = H - 110 - rnd() * (320 + 180 * tall)
   const sw = (1.2 + rnd() * 2.2).toFixed(1)
   const op = (0.28 + rnd() * 0.38).toFixed(2)
   const tipX = x + bend
@@ -394,8 +433,10 @@ for (let i = 0; i < 96; i++) {
     rnd(), (H - top) / H, (0.6 + rnd() * 0.4) * (0.7 + 0.3 * rightFade), tipX + 7, top - 20)
 }
 
-/* 底部中段芦苇带：这一段原来是纯水面，底边空得明显。
-   只做低矮丛（根部压在画幅下沿），草梢不超过水面太多，避免挡住月影倒影。 */
+/* 底部中段芦苇带。**原样恢复**：这一段不该由我擅自改动 ——
+   用户从头到尾要动的都是**右侧**那一丛，是我把"右边稀疏"误判成"中段稀疏"，
+   先后把这里从 78 株加密到 190、又把高度抬到 610，改错了对象，现已全部回退。
+   下面数值与最初版本逐字一致，只留这行注释说明原委。 */
 for (let i = 0; i < 78; i++) {
   const x = 1120 + rnd() * 1900
   const top = H - 90 - rnd() * 250
@@ -445,6 +486,19 @@ const frontHead = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="
     <stop offset="0.60" stop-color="${C.moon}" stop-opacity="0.09"/>
     <stop offset="1" stop-color="${C.moon}" stop-opacity="0"/>
   </linearGradient>
+  <!-- 镜面倒影用：**平顶 + 软边** 的椭圆渐变。
+       原来 0/0.55/1 → 0.75/0.25/0 的衰减太陡：0.86 不透明度铺上去之后，
+       中心一小块直接顶成纯白、外面大片发灰，读作"过曝的白斑 + 糊光"
+       （实测剖面 y1660 均值 112、峰值 177，亮点占比 99.2% —— 整块平顶白）。
+       现在把中段托住、边缘才收：patch 整体是均匀的一块亮，四周柔和渐隐，
+       这才是"月亮在水里的那块倒影"。梯度扁平 = 不要中心热点。 -->
+  <radialGradient id="reflPatch" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="${C.moon}" stop-opacity="0.56"/>
+    <stop offset="0.28" stop-color="${C.moon}" stop-opacity="0.52"/>
+    <stop offset="0.58" stop-color="${C.moon}" stop-opacity="0.34"/>
+    <stop offset="0.80" stop-color="${C.moon}" stop-opacity="0.12"/>
+    <stop offset="1" stop-color="${C.moon}" stop-opacity="0"/>
+  </radialGradient>
   <radialGradient id="reflCore" cx="0.5" cy="0.5" r="0.5">
     <stop offset="0" stop-color="${C.moon}" stop-opacity="0.75"/>
     <stop offset="0.55" stop-color="${C.moon}" stop-opacity="0.25"/>

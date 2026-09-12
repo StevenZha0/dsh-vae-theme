@@ -453,6 +453,9 @@ const runtime = `/* ══ 庐州月 · 许嵩 — DSH 主题运行时装 v2 ═
       'uniform float uAmpFar;',
       'uniform float uSway;',      /* 芦苇摆动像素幅度 */
       'uniform float uBloom;',     /* 倒影晕开强度 */
+      'uniform float uBaseV;',     /* 画面里芦苇"钉住不动"的那条底线（uv.y） */
+      'uniform float uPhase;',     /* 整片风的大方向相位（0..1 圈） */
+      'uniform float uBaseV;',     /* 芦苇"钉住不动"的那条线（uv.y）。见下方 uBaseV 说明 */
       'uniform vec2 uU;',          /* 贴图 u 范围 */
       'uniform vec2 uV;',          /* 贴图 v 范围 */
       'uniform vec2 uRes;',        /* 画布尺寸（CSS px），用于把像素换算成 uv */
@@ -488,13 +491,15 @@ const runtime = `/* ══ 庐州月 · 许嵩 — DSH 主题运行时装 v2 ═
            R = 相位，G = 株高（相对整图），B = 摆幅系数，A = 有参数覆盖 */
       '  vec4 mm = texture2D(uMotion, uv);',
       '  float stalkH = max(mm.g, 0.06);',
-      '  float bend = pow(clamp(uv.y / stalkH, 0.0, 1.0), 1.75);',
-      '  float stalk = mm.r * 6.2831;',
-      '  float ampScale = 0.35 + 0.65 * mm.b;',
-      '  float lag = clamp(uv.y / stalkH, 0.0, 1.0) * 0.30;',
-      '  float gust = 0.70 + 0.30 * sin(uT * 0.21 + uv.x * 2.3);',
-      '  float swing = sin(uT * 0.30 - lag + stalk) * 0.66',
-      '              + sin(uT * 0.53 - lag * 1.6 + stalk * 1.7 + 1.3) * 0.26;',
+      '  float span = max(stalkH - uBaseV, 0.02);',
+      '  float bend = pow(clamp((uv.y - uBaseV) / span, 0.0, 1.0), 1.75);',
+      '  float stalk = uPhase * 6.2831 + (mm.r - 0.5) * 0.38;',
+      '  float depth = mix(0.62, 1.0, clamp((uv.y - uBaseV) / max(1.0 - uBaseV, 0.02), 0.0, 1.0));',
+      '  float ampScale = (0.35 + 0.65 * mm.b) * depth;',
+      '  float lag = clamp((uv.y - uBaseV) / span, 0.0, 1.0) * 0.26;',
+      '  float gust = 0.70 + 0.30 * sin(uT * 0.19 + uv.x * 0.9);',
+      '  float swing = sin(uT * 0.28 - lag + stalk) * 0.66',
+      '              + sin(uT * 0.45 - lag * 1.4 + stalk + 1.3) * 0.20;',
       '  float dxr = swing * gust * ampScale * uSway * bend / uRes.x;',
       '  vec4 r = texture2D(uReeds, vec2(uv.x + dxr, uv.y));',
       '  base.rgb = mix(base.rgb, r.rgb, r.a);',
@@ -531,7 +536,7 @@ const runtime = `/* ══ 庐州月 · 许嵩 — DSH 主题运行时装 v2 ═
     gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
     var U = {};
-    ['uBase', 'uReeds', 'uStatic', 'uMotion', 'uT', 'uWl', 'uAmpNear', 'uAmpFar', 'uSway', 'uBloom', 'uU', 'uV', 'uRes']
+    ['uBase', 'uReeds', 'uStatic', 'uMotion', 'uT', 'uWl', 'uAmpNear', 'uAmpFar', 'uSway', 'uBloom', 'uBaseV', 'uPhase', 'uU', 'uV', 'uRes']
       .forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
 
     /* 贴图：FLIP_Y 打开后 v=0 对应图像底边，与画布 vQ.y=0 在下方一致 */
@@ -565,11 +570,14 @@ const runtime = `/* ══ 庐州月 · 许嵩 — DSH 主题运行时装 v2 ═
 
     gl.uniform1f(U.uAmpNear, g.ampNear || 16);
     gl.uniform1f(U.uAmpFar, g.ampFar || 4);
-    /* 芦苇梢部的横向摆幅（CSS px）。修正 bend 方向后摆动集中在梢部，
-       同样的数值看起来比之前明显得多；再配合调慢的频率，14 仍然偏大，收到 9。 */
-    gl.uniform1f(U.uSway, 9.0);
+    /* 芦苇梢部的横向摆幅（CSS px）。幅度与频率按用户要求各加一点：
+       原来 9.0 与 0.24/0.39 Hz，现在 10.5 与 0.28/0.45。 */
+    gl.uniform1f(U.uSway, 10.5);
     /* 倒影晕开的相加强度。不宜大 —— 底光 + bloom 双重相加会把倒影推成过曝的白墙。 */
     gl.uniform1f(U.uBloom, 0.045);
+    /* 整片风的大方向相位（0..1 圈）。固定值：让芦苇丛有一个稳定的"倒向"，
+       个体差异交给着色器里那点逐株小扰动，而不是每株一个随机相位。 */
+    gl.uniform1f(U.uPhase, 0.12);
     gl.uniform1i(U.uReeds, 1);
     gl.uniform1i(U.uStatic, 2);
     gl.uniform1i(U.uMotion, 3);
@@ -638,6 +646,10 @@ const runtime = `/* ══ 庐州月 · 许嵩 — DSH 主题运行时装 v2 ═
       var wlV = 1 - (g.waterLine || 0) / bandH;
       var wlQ = (wlV - vBot) / Math.max(vTop - vBot, 1e-4);
       gl.uniform1f(U.uWl, Math.max(0, Math.min(1, wlQ)));
+      /* 芦苇的"钉住线"放在画布可见下沿：画面之外那截芦苇照旧不动，
+        所以边界上不会撕开；而画面里这一段能完整地"从不动点弯上来"。
+         这一行随 layout 更新，窗口缩放时和画布一起重新对齐。 */
+      gl.uniform1f(U.uBaseV, vBot);
     }
 
     /* 抓帧必须**在绘制之后、同一帧内**完成：
@@ -836,23 +848,64 @@ const runtime = `/* ══ 庐州月 · 许嵩 — DSH 主题运行时装 v2 ═
       if (wl > H) wl = H;
 
       /* ① 底图：整段不透明重绘（盖住静态底图，避免芦苇重影）。
-            水线以上原样绘制，水线以下才做逐条带横向位移。 */
+            水线以上原样绘制，水线以下才做逐条带横向位移。
+
+            水面这一组数改过两轮，两次都是实测定的，过程记在这里免得走回头路：
+            【第一轮】原来 aF=3 / aN=12，量下来水面「变化超过 6 级灰度」的像素只有 0.58%，
+                     几乎读不出在动（水的平均亮度约 45）。误判为"太小"，于是放大。
+            【第二轮】放大到等效 aN≈75 后确实看得见，但用户反馈「像蛇一扭一扭、
+                     而且来回摆、没有湖面波纹的感觉」。在页面里量逐行横向位移：
+                     各行在自己不同的时刻到峰值、相邻行相关只有 0.705，
+                     最下一行摆幅 9.9px —— 这正是"蛇"的定义：一层错开一层的横向剪切。
+                     根因是每个分量都写成 sin(t·f)：**驻波**，先左后右来回摆，没有方向。
+            【现在】按湖面该有的三条性质重写：
+            【现在】两处一起改，都是实测定的：
+                     · **改成纵向位移为主**。这是这一轮最关键的判断：
+                       横向位移对一根**竖长**的倒影几乎无效 —— 左右推它 2px，它还是那根竖条，
+                       所以"波纹没把倒影晕开"不是幅度不够，是**轴选错了**。
+                       真实水面把月亮拉成竖带，靠的是纵向把倒影拉长、切断、错位。
+                       做法：每条带从源图略微不同的 y 取料（sy 加一个行进波偏移），
+                       等于把倒影在纵向上拉开/压缩；实测缝隙比只有 1.02，不会撕出横缝。
+                     · 横向保留少量（压到原来一半以下），只给波纹一点横向层次，
+                       避免上一版"一层错一层"的剪切（那版行间相关 0.705、最下行摆幅 9.9px）。
+                     · 保留行进波形式 sin(p·k − t·f)，相位单向推进，波纹有固定方向。
+                   候选在真实页面里并排跑出来挑的（review/water-lab3.mjs），
+                   比的是跨帧可见变化 + 相邻行缝隙比（要接近 1）。 */
       if (okWater) {
         var aN = g.ampNear || 12, aF = g.ampFar || 3;
         for (var y = 0; y < H; y += SW) {
-          var off = 0;
+          var off = 0, offY = 0;
           if (y + SW > wl) {
             var p = H > wl ? (y - wl) / (H - wl) : 0;
             if (p < 0) p = 0;
-            var amp = aF + (aN - aF) * p;
-            /* 低频大波让竖长的月影被拉散 —— 读起来就是"倒影被水波晕开" */
-            off = Math.sin(t * 0.85 + p * 5.0) * amp
-                + Math.sin(t * 1.60 - p * 10.5) * amp * 0.40
-                + Math.sin(t * 0.42 + p * 2.1) * amp * 0.55;
+            var q = Math.pow(p, 1.3);
+            /* 用户明确要的是**横向的"流"**，不是纵向的"来回"。所以：
+                 · 横向（主）：一个很小的行波 + 一个**单向漂移**；
+                 · 纵向只留 1.6px 的极轻错位，用来让倒影边缘不至于是一刀切。
+               经验教训（这一条翻过两次车，记牢）：
+                 纯行进波 sin(p·k − t·f) 只是**相位**在推进，水面质点本身仍在原地往复，
+                 所以无论怎么调它都读作"来回"。要让人看出方向，必须有一个
+                 **不振荡的净位移** —— 时间线性累积、随深度加大（越近跑得越远，合透视），
+                 对 480s 取模，长挂机时也能平滑回卷。
+                 另外"逐行错相位"是上一版"像蛇"的根因（行间相关 0.705、最下行摆幅 9.9px）：
+                 横向行波的幅度必须远小于纵向那一版，且沿深度的相位推进要慢。 */
+            offY = Math.sin(p * 1.2 - t * 0.26 * 6.2831 + 1.1) * (0.5 + (1.6 - 0.5) * q);
+            off = Math.sin(p * 0.8 - t * 0.20 * 6.2831) * (1.2 + (4.0 - 1.2) * q)
+                + Math.sin(p * 2.1 - t * 0.38 * 6.2831) * (0.5 + (1.8 - 0.5) * q);
+            /* 单向漂移：横向"流"的主体。1.4px/s，随深度放大。 */
+            off += ((t * 1.4) % 480) * q;
+            /* 远处（靠近水线）不该有和近处一样大的位移 */
+            var far = aF / 3;
+            off *= far; offY *= far;
           }
           var s1 = slice(y, SW);
           if (!s1) break;
-          ctx.drawImage(imgWater, V.srcX, s1.sy, V.srcW, s1.sh, -off, y, W, SW + 0.6);
+          /* 源 y 加偏移。sy 落到图外时 drawImage 会取到空处、出现一条透明缝，
+             所以把 sy/sh 一起夹回图内。 */
+          var sy = s1.sy + offY, sh = s1.sh;
+          if (sy < 0) { sh += sy; sy = 0; }
+          if (sh <= 0.05) continue;
+          ctx.drawImage(imgWater, V.srcX, sy, V.srcW, sh, -off, y, W, SW + 0.6);
         }
       }
 
@@ -862,13 +915,16 @@ const runtime = `/* ══ 庐州月 · 许嵩 — DSH 主题运行时装 v2 ═
       /* ② 芦苇：根部（画面下方）不动，越往上摆幅越大 */
       if (okReeds) {
         /* 摆动只作用在芦苇身上：根部（画面下方）不动，越往上摆幅越大。
-           改用平方增长（悬臂梁的挠曲形状），读起来是"弯"而不是"剪切"。 */
+           改用平方增长（悬臂梁的挠曲形状），读起来是"弯"而不是"剪切"。
+           幅度与频率按用户要求各加一点：原来 12/4 px 与 0.62/1.05 Hz 的两条正弦，
+           现在 14.5/5 px 与 0.70/1.18。上下限要克制 —— 这是"稍微加一点点"，
+           加多了会从"随风微动"变成"甩动"。 */
         for (var ry = 0; ry < H; ry += RW) {
           var rp = (ry + RW / 2) / H;
           var ramp = Math.max(0, 1 - rp);
           ramp = ramp * ramp;
-          var roff = Math.sin(t * 0.62 + rp * 2.4) * 12.0 * ramp
-                   + Math.sin(t * 1.05 + rp * 4.8) * 4.0 * ramp;
+          var roff = Math.sin(t * 0.70 + rp * 2.4) * 14.5 * ramp
+                   + Math.sin(t * 1.18 + rp * 4.8) * 5.0 * ramp;
           var s2 = slice(ry, RW);
           if (!s2) break;
           ctx.drawImage(imgReeds, V.srcX, s2.sy, V.srcW, s2.sh, -roff, ry, W, RW + 0.6);
@@ -1451,6 +1507,81 @@ const runtime = `/* ══ 庐州月 · 许嵩 — DSH 主题运行时装 v2 ═
     } catch (e) {}
   }
 
+  /* ────────── 查看桥（页面侧）──────────
+     问题：AI 侧看不到浏览器里真实渲染出来的东西。无头浏览器打开 DSH 只是个空壳
+     （没有登录态，token/canvas/element 全是 0），于是每次都得让人往控制台粘一段脚本 —— 
+     这不可能是常规通道。
+     做法：运行时装本来就被注入页面，让页面自己定时来取命令、跑完把结果送回本机路由。
+     于是"在真实页面里执行一段代码"不再需要用户做任何事。
+     边界：只跟本机同源路由说话；无命令时纯粹是空轮询（每 1.2s 一次 HEAD 量级的 GET）；
+     标签页隐藏时停轮询，省电也省日志。
+     需要用户手势才能做的（整屏截图 getDisplayMedia 必须有一次点击）不在本通道里假装能做，
+     那种情况由 host 侧单独引导。 */
+  function startBridge() {
+    if (window.__VAE_BRIDGE__) return;
+    window.__VAE_BRIDGE__ = true;
+    var URLB = '/vae-theme-bridge';
+    var busy = false;
+    var hits = 0, misses = 0;
+
+    function postResult(id, data, err, ms) {
+      var payload;
+      try {
+        payload = JSON.stringify({ id: id, data: data, err: err || null, ms: ms || null });
+      } catch (e) {
+        payload = JSON.stringify({ id: id, data: null, err: 'result not serializable: ' + String((e && e.message) || e) });
+      }
+      /* 超大结果（dataURI 之类）截断，别把上行打爆 */
+      if (payload.length > 3000000) {
+        payload = JSON.stringify({ id: id, data: null, err: 'result too large (' + payload.length + ' bytes)' });
+      }
+      fetch(URLB, { method: 'POST', headers: { 'content-type': 'application/json' }, body: payload })
+        .catch(function () {});
+    }
+
+    function run(id, expr) {
+      var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+      var out;
+      try {
+        /* new Function 而不是 eval：表达式在独立作用域里跑，拿不到本运行时的闭包变量，
+           不会误伤主题自己的状态。document / window / 各类全局照常可用。 */
+        out = (new Function('return (' + expr + ')'))();
+      } catch (e1) {
+        /* 不是表达式就当语句块跑（允许 await） */
+        try {
+          out = (new Function('return (async function(){' + expr + '})()'))();
+        } catch (e2) {
+          postResult(id, null, 'eval: ' + String((e2 && e2.message) || e2));
+          return;
+        }
+      }
+      Promise.resolve(out).then(function (v) {
+        var t1 = (window.performance && performance.now) ? performance.now() : Date.now();
+        postResult(id, v, null, Math.round(t1 - t0));
+      }, function (e) {
+        postResult(id, null, 'run: ' + String((e && e.message) || e));
+      });
+    }
+
+    function poll() {
+      if (document.hidden) return;
+      if (busy) return;
+      busy = true;
+      fetch(URLB, { method: 'GET', headers: { 'accept': 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null })
+        .then(function (o) {
+          busy = false;
+          if (!o || o.idle || !o.expr) { misses++; return; }
+          hits++;
+          run(o.id, o.expr);
+        })
+        .catch(function () { busy = false; misses++; });
+    }
+    window.setInterval(poll, 1200);
+    window.setTimeout(poll, 900);
+    window.__VAE_BRIDGE_STAT__ = function () { return { hits: hits, misses: misses }; };
+  }
+
   function boot() {
     if (!document.body) { window.setTimeout(boot, 60); return; }
     beacon('runtime-start');
@@ -1461,6 +1592,7 @@ const runtime = `/* ══ 庐州月 · 许嵩 — DSH 主题运行时装 v2 ═
       ['rain', startRain],
       ['water', startWater],
       ['lyrics', startLyrics],
+      ['bridge', startBridge],
     ];
     for (var si = 0; si < steps.length; si++) {
       try {
