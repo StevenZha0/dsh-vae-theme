@@ -1,6 +1,7 @@
 // 生成《庐州月 · 许嵩》完整主题配置（.tczp + localStorage 配置 + 注入脚本）
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const ASSETS = path.join(ROOT, 'build/assets')
